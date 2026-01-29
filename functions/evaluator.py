@@ -1,4 +1,5 @@
 from logging import Logger
+import time
 
 import numpy as np
 import torch
@@ -101,7 +102,13 @@ class Evaluator(CheckpointRunner):
             # Get ground truth
             images = input_batch['images']
 
+            # Time the forward pass
+            torch.cuda.synchronize()  # Ensure all GPU operations are complete
+            inference_start = time.time()
             out = self.model(images)
+            torch.cuda.synchronize()  # Wait for forward pass to complete
+            inference_end = time.time()
+            self.inference_time.update(inference_end - inference_start, images.size(0))
 
             if self.options.model.name == "pixel2mesh":
                 pred_vertices = out["pred_coord"][-1]
@@ -135,14 +142,24 @@ class Evaluator(CheckpointRunner):
         elif self.options.model.name == "classifier":
             self.acc_1 = AverageMeter()
             self.acc_5 = AverageMeter()
+        
+        # Timing metrics
+        self.inference_time = AverageMeter()  # Time for forward pass only
+        self.batch_time = AverageMeter()  # Time for entire batch processing
+        self.eval_start_time = time.time()
 
         # Iterate over all batches in an epoch
+        batch_start = time.time()
         for step, batch in enumerate(test_data_loader):
             # Send input to GPU
             batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
 
             # Run evaluation step
             out = self.evaluate_step(batch)
+            
+            # Record batch processing time
+            batch_end = time.time()
+            self.batch_time.update(batch_end - batch_start, batch['images'].size(0))
 
             # Tensorboard logging every summary_steps steps
             if self.evaluate_step_count % self.options.test.summary_steps == 0:
@@ -151,13 +168,28 @@ class Evaluator(CheckpointRunner):
             # add later to log at step 0
             self.evaluate_step_count += 1
             self.total_step_count += 1
+            batch_start = time.time()
 
+        # Log timing information
+        eval_total_time = time.time() - self.eval_start_time
+        self.logger.info("="*60)
+        self.logger.info("TIMING RESULTS:")
+        self.logger.info("Total evaluation time: %.2f seconds (%.2f minutes)" % (eval_total_time, eval_total_time/60))
+        self.logger.info("Average inference time per image: %.4f seconds (%.2f ms)" % (self.inference_time.avg, self.inference_time.avg*1000))
+        self.logger.info("Average batch processing time: %.4f seconds" % self.batch_time.avg)
+        self.logger.info("Throughput: %.2f images/second" % (1.0 / self.inference_time.avg if self.inference_time.avg > 0 else 0))
+        self.logger.info("="*60)
+        
         for key, val in self.get_result_summary().items():
             scalar = val
             if isinstance(val, AverageMeter):
                 scalar = val.avg
             self.logger.info("Test [%06d] %s: %.6f" % (self.total_step_count, key, scalar))
             self.summary_writer.add_scalar("eval_" + key, scalar, self.total_step_count + 1)
+        
+        # Add timing to tensorboard
+        self.summary_writer.add_scalar("eval_inference_time_ms", self.inference_time.avg*1000, self.total_step_count + 1)
+        self.summary_writer.add_scalar("eval_throughput_imgs_per_sec", 1.0 / self.inference_time.avg if self.inference_time.avg > 0 else 0, self.total_step_count + 1)
 
     def average_of_average_meters(self, average_meters):
         s = sum([meter.sum for meter in average_meters])

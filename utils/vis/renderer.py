@@ -86,8 +86,8 @@ class MeshRenderer(object):
         vertices_2d = cv2.projectPoints(np.expand_dims(vertices, -1),
                                         rvec, tvec, camera_k, camera_dist_coeffs)[0]
         vertices_2d = np.reshape(vertices_2d, (-1, 2))
-        alpha = np.zeros((height, width, 3), np.float)
-        whiteboard = np.ones((3, height, width), np.float)
+        alpha = np.zeros((height, width, 3), np.float32)
+        whiteboard = np.ones((3, height, width), np.float32)
         if np.isnan(vertices_2d).any():
             return whiteboard, alpha
         for x, y in vertices_2d:
