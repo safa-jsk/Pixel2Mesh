@@ -7,15 +7,15 @@ checkpoint: datasets/data/pretrained/tensorflow.pth.tar
 checkpoint_dir: checkpoints/designA
 dataset:
   camera_c:
-  - 112.0
-  - 112.0
+    - 112.0
+    - 112.0
   camera_f:
-  - 250.0
-  - 250.0
+    - 250.0
+    - 250.0
   mesh_pos:
-  - 0.0
-  - 0.0
-  - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
   name: shapenet
   normalization: false
   num_classes: 13
@@ -31,9 +31,9 @@ log_level: info
 loss:
   weights:
     chamfer:
-    - 1.0
-    - 1.0
-    - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
     chamfer_opposite: 0.55
     constant: 1.0
     edge: 0.1
@@ -58,8 +58,8 @@ optim:
   lr: 1.0e-06
   lr_factor: 0.1
   lr_step:
-  - 30
-  - 45
+    - 30
+    - 45
   name: adam
   sgd_momentum: 0.9
   wd: 1.0e-06
