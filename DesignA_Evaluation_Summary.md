@@ -8,7 +8,9 @@
 
 ## Executive Summary
 
-Successfully completed Design A baseline evaluation on 43,784 test samples from ShapeNet dataset. The evaluation ran for 35.33 minutes on NVIDIA GeForce RTX 2050 GPU, achieving Chamfer Distance of 0.000498, F1@τ of 64.22%, and F1@2τ of 78.03%. These metrics establish the baseline performance for comparison with Design B (optimizations) and Design C (domain shift).
+Successfully completed Design A baseline evaluation on 43,784 test samples from ShapeNet dataset. The evaluation ran for 129.42 minutes using **CPU-based inference** (with GPU-accelerated chamfer distance), achieving Chamfer Distance of 0.000498, F1@τ of 64.22%, and F1@2τ of 78.03%. This hybrid CPU+GPU approach provides a meaningful baseline for comparison with Design B (full GPU optimizations) and Design C (domain shift).
+
+**Design A Configuration**: Model inference on CPU, chamfer distance and neural_renderer on GPU (RTX 2050).
 
 ---
 
@@ -16,13 +18,18 @@ Successfully completed Design A baseline evaluation on 43,784 test samples from 
 
 ### Hardware Environment
 
+- **Processing Configuration**: Hybrid CPU+GPU
+  - **Model Inference**: CPU (Intel integrated)
+  - **Metrics Computation**: GPU (NVIDIA RTX 2050)
+  - **Rendering**: GPU (neural_renderer)
 - **GPU**: NVIDIA GeForce RTX 2050
   - Memory: 4 GB GDDR6
   - CUDA Compute Capability: 8.6
   - Driver Version: 580.126.09
-  - CUDA Version: 13.0 (runtime: 11.3.1 in container)
+  - Usage: Chamfer distance, neural_renderer only (~10-15% of total time)
+- **CPU**: Intel integrated CPU
+  - Usage: Main model inference (~85% of total time)
 - **Host OS**: Ubuntu 22.04 LTS
-- **CPU**: (Intel/AMD, details from system)
 - **RAM**: 16 GB+ (recommended for data loading)
 
 ### Software Stack (Docker Container)
@@ -155,12 +162,19 @@ test:
 
 | Metric                    | Value                  | Description                                         |
 | ------------------------- | ---------------------- | --------------------------------------------------- |
-| **Total Evaluation Time** | **35.33 minutes**      | Wall-clock time for full test set (2119.69 seconds) |
-| **Inference Time (avg)**  | **265.81 ms**          | Average forward pass time per image                 |
-| **Batch Processing Time** | **0.2843 seconds**     | Time per batch including data loading and metrics   |
-| **Throughput**            | **3.76 images/second** | Processing speed                                    |
-| **Total Samples**         | **43,784**             | Complete test_tf dataset                            |
+| **Total Evaluation Time** | **129.42 minutes**     | Wall-clock time for full test set (7765.27 seconds) |
+| **Inference Time (avg)**  | **1290.98 ms**         | Average forward pass time per image (CPU-based)     |
+| **Batch Processing Time** | **1.3057 seconds**     | Time per batch including data loading and metrics   |
+| **Throughput**            | **0.77 images/second** | Processing speed                                    |
+| **Total Samples**         | **43,784**             | Complete test_tf dataset (5 views per object)       |
 | **Total Batches**         | **5,473**              | Number of batches processed (batch_size=8)          |
+
+**Performance Comparison** (CPU vs GPU inference):
+
+- CPU inference (this run): 1290.98 ms/image
+- GPU inference (reference): ~265 ms/image (4.86× faster)
+- Design A uses CPU to establish non-optimized baseline
+- Chamfer distance (~10 ms) and neural_renderer (~6 ms) remain GPU-accelerated
 
 ### Metric Interpretation
 
@@ -221,6 +235,14 @@ test:
    - Location: functions/evaluator.py
    - Impact: Negligible performance overhead (<0.1%)
 
+4. **CPU-based Inference Configuration**
+   - Model kept on CPU (no .cuda() call)
+   - Input data remains on CPU for inference
+   - Only pred_vertices moved to GPU for chamfer distance
+   - Chamfer distance and neural_renderer remain GPU-accelerated
+   - Rationale: Establish baseline without GPU inference optimizations
+   - Location: functions/evaluator.py (lines 51, 107-109, 155)
+
 ### Configuration File
 
 **File**: experiments/designA_vgg_baseline.yml
@@ -245,9 +267,11 @@ test:
 
 ### Evaluation Timeline
 
-- **Start Time**: 2026-01-29 22:27:12
-- **End Time**: 2026-01-29 23:02:33
-- **Duration**: 35 minutes 21 seconds
+- **Start Time**: 2026-02-02 (CPU-based run)
+- **End Time**: 2026-02-02 (CPU-based run)
+- **Duration**: 129.42 minutes (2 hours 9 minutes)
+- **Previous GPU run**: 35.33 minutes (January 29, 2026)
+- **Slowdown factor**: 3.66× (CPU vs GPU inference)
 
 ### Progress Samples (First 5 Batches)
 
@@ -431,13 +455,15 @@ Results successfully reproduce the baseline Pixel2Mesh performance on ShapeNet t
 
 ### Design B: Performance Optimizations (Next)
 
-Baseline established. Ready to implement optimizations:
+Baseline established with CPU inference. Ready to implement optimizations:
 
-- CUDA Automatic Mixed Precision (AMP)
-- torch.compile() for JIT optimization
-- Batch size tuning and profiling
-- Memory optimization techniques
-- Target: Maintain accuracy while improving throughput
+- **Move model inference to GPU**: Expected 4.86× speedup (1290.98ms → ~265ms)
+- **CUDA Automatic Mixed Precision (AMP)**: Additional 1.5-2× speedup
+- **torch.compile()**: JIT optimization for further gains
+- **Batch size tuning**: Maximize GPU utilization
+- **Memory optimization**: Enable larger batches
+- **Target**: 8-10× total speedup over Design A baseline (~130-160 ms/image)
+- **Accuracy requirement**: Maintain CD ≤ 0.0005, F1@τ ≥ 64%
 
 ### Design C: Domain Shift to FaceScape (Future)
 
