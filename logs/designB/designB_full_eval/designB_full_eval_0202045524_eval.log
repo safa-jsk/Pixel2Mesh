@@ -1,0 +1,76 @@
+2026-02-02 04:55:25,866 {'checkpoint': 'datasets/data/pretrained/tensorflow.pth.tar',
+ 'checkpoint_dir': 'checkpoints/designB/designB_full_eval/designB_full_eval_0202045524',
+ 'dataset': {'camera_c': array([112., 112.]),
+             'camera_f': array([250., 250.]),
+             'mesh_pos': array([0., 0., 0.]),
+             'name': 'shapenet',
+             'normalization': False,
+             'num_classes': 13,
+             'predict': {'folder': 'outputs/designB_meshes'},
+             'shapenet': {'num_points': 9000,
+                          'resize_with_constant_border': True},
+             'subset_eval': 'test_tf',
+             'subset_train': 'test_tf'},
+ 'log_dir': 'logs/designB/designB_full_eval',
+ 'log_level': 'info',
+ 'loss': {'weights': {'chamfer': array([1., 1., 1.]),
+                      'chamfer_opposite': 0.55,
+                      'constant': 1.0,
+                      'edge': 0.1,
+                      'laplace': 0.5,
+                      'move': 0.033,
+                      'normal': 0.00016,
+                      'reconst': 0.0}},
+ 'model': {'align_with_tensorflow': True,
+           'backbone': 'vgg16',
+           'coord_dim': 3,
+           'gconv_activation': True,
+           'hidden_dim': 256,
+           'last_hidden_dim': 128,
+           'name': 'pixel2mesh',
+           'z_threshold': 0},
+ 'name': 'designB_full_eval',
+ 'num_gpus': 1,
+ 'num_workers': 4,
+ 'optim': {'adam_beta1': 0.9,
+           'lr': 1e-06,
+           'lr_factor': 0.1,
+           'lr_step': array([30, 45]),
+           'name': 'adam',
+           'sgd_momentum': 0.9,
+           'wd': 1e-06},
+ 'pin_memory': True,
+ 'summary_dir': 'summary/designB/designB_full_eval/designB_full_eval_0202045524',
+ 'test': {'batch_size': 8,
+          'dataset': array([], dtype=float64),
+          'shuffle': False,
+          'summary_steps': 100,
+          'weighted_mean': False},
+ 'train': {'batch_size': 8,
+           'checkpoint_steps': 10000,
+           'num_epochs': 2,
+           'shuffle': True,
+           'summary_steps': 1,
+           'test_epochs': 1,
+           'use_augmentation': True},
+ 'version': 'designB_full_eval_0202045524'}
+2026-02-02 04:55:25,868 Design B: Full Dataset Baseline Evaluation
+2026-02-02 04:55:25,868 Options file: experiments/designB_baseline.yml
+2026-02-02 04:55:25,868 Checkpoint: datasets/data/pretrained/tensorflow.pth.tar
+2026-02-02 04:55:25,868 Output directory: outputs/designB_meshes
+2026-02-02 04:55:25,968 Using GPUs: [0]
+2026-02-02 04:55:25,968 Loading datasets: shapenet
+2026-02-02 04:55:25,974 Running model initialization...
+2026-02-02 04:55:25,974 MeshRenderer not available (neural_renderer not installed)
+2026-02-02 04:55:27,653 Loading checkpoint file: /workspace/datasets/data/pretrained/tensorflow.pth.tar
+2026-02-02 04:55:27,730 Optimizers not found in the runner, skipping...
+2026-02-02 04:55:27,733 ================================================================================
+2026-02-02 04:55:27,733 DESIGN B: Full Dataset Baseline Evaluation
+2026-02-02 04:55:27,733 ================================================================================
+2026-02-02 04:55:27,733 Dataset: train_tf (43783 samples)
+2026-02-02 04:55:27,733 Batch size: 8
+2026-02-02 04:55:27,733 Mesh output directory: outputs/designB_meshes
+2026-02-02 04:55:27,733 Samples to generate meshes: 26 (2 per category)
+2026-02-02 04:55:27,733 ================================================================================
+2026-02-02 04:55:27,733 Starting evaluation: 5473 batches
+2026-02-02 04:55:27,733 --------------------------------------------------------------------------------
