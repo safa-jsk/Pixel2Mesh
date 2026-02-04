@@ -1,6 +1,7 @@
 # Design B: Mesh Generation Summary
 
 **Date**: February 2, 2026  
+**Last Updated**: February 4, 2026 (Performance optimizations added)  
 **Generation ID**: designB_full_eval_0202045615  
 **Purpose**: Generate qualitative mesh reconstructions during full dataset evaluation
 
@@ -8,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully generated **75 high-quality 3D mesh reconstructions** from 26 representative samples across all 13 ShapeNet object categories during the Design B evaluation. Each sample produced 3 mesh files representing the progressive deformation stages of Pixel2Mesh's GCN architecture (some samples had fewer due to view matching). The mesh generation was integrated into the evaluation pipeline, achieving efficient batch processing at **54.18 samples/second**.
+Successfully generated **75 high-quality 3D mesh reconstructions** from 26 representative samples across all 13 ShapeNet object categories during the Design B evaluation. Each sample produced 3 mesh files representing the progressive deformation stages of Pixel2Mesh's GCN architecture (some samples had fewer due to view matching). The mesh generation was integrated into the evaluation pipeline, achieving efficient batch processing at **60.30 samples/second** (with performance optimizations).
 
 ---
 
@@ -40,6 +41,17 @@ Successfully generated **75 high-quality 3D mesh reconstructions** from 26 repre
   'camera_f': [250.0, 250.0],
   'camera_c': [112.0, 112.0],
   'align_with_tensorflow': True
+}
+```
+
+### Performance Optimization Parameters (Updated February 4, 2026)
+
+```python
+{
+  'warmup_iters': 15,        # GPU warmup (15× cold-start speedup)
+  'cudnn_benchmark': True,   # cuDNN autotuner
+  'tf32_enabled': True,      # TF32 tensor cores (Ampere+)
+  'amp_enabled': False,      # AMP disabled (sparse ops incompatible)
 }
 ```
 
@@ -123,28 +135,37 @@ Unlike Design A which had a separate mesh generation step, Design B integrates m
 
 ## 4. Performance Metrics
 
-### Timing Results
+### Timing Results (Updated February 4, 2026)
 
-| Metric                    | Value            | Details                                    |
-| ------------------------- | ---------------- | ------------------------------------------ |
-| **Total Evaluation Time** | **808.11 sec**   | Including mesh generation                  |
-| **Throughput**            | **54.18 samp/s** | Samples processed per second               |
-| **Avg Inference (batch)** | **140.48 ms**    | Forward pass time per batch                |
-| **Avg Time per Sample**   | **18.46 ms**     | Processing time per individual sample      |
-| **Mesh Save Overhead**    | **~18 sec**      | Additional time for 75 mesh files          |
+| Metric                    | Original Run     | Optimized Run    | Details                                    |
+| ------------------------- | ---------------- | ---------------- | ------------------------------------------ |
+| **Total Evaluation Time** | 808.11 sec       | **726.08 sec**   | Including mesh generation                  |
+| **Throughput**            | 54.18 samp/s     | **60.30 samp/s** | Samples processed per second               |
+| **Avg Inference (batch)** | 140.48 ms        | **125.87 ms**    | Forward pass time per batch                |
+| **Avg Time per Sample**   | 18.46 ms         | **16.58 ms**     | Processing time per individual sample      |
+| **Mesh Save Overhead**    | ~18 sec          | ~18 sec          | Additional time for 75 mesh files          |
+
+**Performance Optimizations Applied**:
+- GPU warmup: 15 iterations (15× cold-start speedup: 1777ms → 117ms)
+- cuDNN benchmark: enabled (optimal convolution algorithms)
+- TF32 tensor cores: enabled (Ampere+ GPU acceleration)
 
 ### Comparison with Design A
 
-| Metric                  | Design A | Design B | Speedup |
-|-------------------------|----------|----------|---------|
-| Mesh Generation Time    | 75 sec   | ~18 sec  | **4.2×** |
-| Time per Mesh           | 2.88 sec | 0.24 sec | **12×** |
-| Integrated with Eval?   | No       | Yes      | - |
+| Metric                  | Design A | Design B (Original) | Design B (Optimized) | Speedup |
+|-------------------------|----------|---------------------|----------------------|---------|
+| Mesh Generation Time    | 75 sec   | ~18 sec             | ~18 sec              | **4.2×** |
+| Time per Mesh           | 2.88 sec | 0.24 sec            | 0.24 sec             | **12×** |
+| Total Throughput        | 20.65 s/s| 54.18 samp/s        | **60.30 samp/s**     | **2.9×** |
+| Integrated with Eval?   | No       | Yes                 | Yes                  | - |
 
 The significant speedup is due to:
 1. Integrated pipeline (no separate inference pass)
 2. RTX 4070 SUPER vs RTX 2050 GPU
 3. Batch processing efficiency
+4. **GPU warmup** eliminates cold-start overhead
+5. **cuDNN benchmark** selects optimal convolution kernels
+6. **TF32 tensor cores** accelerate matrix operations
 
 ---
 

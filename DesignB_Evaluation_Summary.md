@@ -130,6 +130,27 @@ dataset:
 - **DataLoader Workers**: 4 parallel workers
 - **Pin Memory**: Enabled for faster GPU transfer
 
+### Performance Optimization Settings (Updated February 4, 2026)
+
+```yaml
+performance:
+  warmup_iters: 15          # GPU warmup iterations before timing
+  cudnn_benchmark: true     # cuDNN autotuner for optimal conv kernels
+  tf32_enabled: true        # TF32 tensor cores (Ampere+ GPUs)
+  amp_enabled: false        # AMP disabled (sparse ops don't support FP16)
+  compile_enabled: false    # torch.compile (PyTorch 2.x only)
+```
+
+**Performance Utilities**: Implemented in `utils/perf.py`
+
+| Feature | CLI Flag | Default | Effect |
+|---------|----------|---------|--------|
+| GPU Warmup | `--warmup-iters N` | 10 | Eliminates cold-start overhead (15× speedup: 1777ms → 117ms) |
+| cuDNN Benchmark | `--cudnn-benchmark` | Disabled | Autotuner selects fastest conv algorithms |
+| TF32 Math | `--tf32` | Disabled | Tensor core acceleration on Ampere+ GPUs |
+| AMP Autocast | `--amp/--no-amp` | Disabled | Mixed precision (disabled: sparse ops incompatible) |
+| torch.compile | `--compile` | Disabled | Graph optimization (PyTorch 2.x only) |
+
 ---
 
 ## 5. Evaluation Results
@@ -161,16 +182,24 @@ dataset:
 | Watercraft    | 1,939   | 0.000569         | 59.77%  | 74.01%  |
 | **Overall**   | **43,783** | **0.000451**  | **65.67%** | **79.51%** |
 
-### Performance Metrics
+### Performance Metrics (Updated February 4, 2026)
 
-| Metric                    | Value                   | Description                                         |
-| ------------------------- | ----------------------- | --------------------------------------------------- |
-| **Total Evaluation Time** | **13.47 minutes**       | Wall-clock time for full test set (808.11 seconds)  |
-| **Average Time per Sample** | **18.46 ms**          | Processing time per image                           |
-| **Inference Time (batch)** | **140.48 ms**          | Average forward pass time per batch                 |
-| **Throughput**            | **54.18 samples/second** | Processing speed                                   |
-| **Total Samples**         | **43,783**              | Complete test_tf dataset                            |
-| **Total Batches**         | **5,473**               | Number of batches processed (batch_size=8)          |
+| Metric                    | Original Run | Optimized Run | Description                                         |
+| ------------------------- | ------------ | ------------- | --------------------------------------------------- |
+| **Total Evaluation Time** | 13.47 min    | **12.10 min** | Wall-clock time for full test set                   |
+| **Average Time per Sample** | 18.46 ms   | **16.58 ms**  | Processing time per image                           |
+| **Inference Time (batch)** | 140.48 ms   | **125.87 ms** | Average forward pass time per batch                 |
+| **Throughput**            | 54.18 samp/s | **60.30 samp/s** | Processing speed                                 |
+| **Total Samples**         | 43,783       | 43,783        | Complete test_tf dataset                            |
+| **Total Batches**         | 5,473        | 5,473         | Number of batches processed (batch_size=8)          |
+
+**Optimization Impact**: +11.3% throughput improvement with warmup + cuDNN benchmark + TF32
+
+**GPU Warmup Analysis**:
+- First iteration (cold): 1777.40 ms
+- Average warmup iteration: 229.07 ms
+- Post-warmup stable: 117.38 ms
+- Warmup speedup: **15.1×**
 
 ### Category Performance Analysis
 
@@ -215,10 +244,19 @@ dataset:
 
 ### Analysis
 
-The significant performance improvement is primarily due to:
+The significant performance improvement is due to both hardware and software optimizations:
+
+**Hardware Factors**:
 1. **GPU Upgrade**: RTX 4070 SUPER has 3.5× more CUDA cores
 2. **Memory Bandwidth**: 4.5× higher memory bandwidth enables faster data transfer
 3. **Larger VRAM**: Allows more efficient batching without memory constraints
+4. **TF32 Support**: Compute capability 8.9 enables tensor core acceleration
+
+**Software Optimizations** (Implemented February 4, 2026):
+1. **GPU Warmup**: 15 iterations eliminate cold-start overhead (15× speedup on first batch)
+2. **cuDNN Benchmark**: Autotuner selects optimal convolution algorithms
+3. **TF32 Tensor Cores**: Faster matrix operations with minimal precision loss
+4. **Note**: AMP (FP16) disabled - P2M sparse graph convolutions don't support half precision
 
 The slight improvement in accuracy metrics (CD, F1) is within expected variance and likely due to:
 - Numerical precision differences between GPUs
@@ -344,23 +382,36 @@ Meshes were saved for matched samples during evaluation:
 
 ## 10. Reproducibility Information
 
-### Docker Run Command
+### Docker Run Command (with Performance Optimizations)
 
 ```bash
-# Remove existing container if any
-sudo docker rm pixel2mesh_eval 2>/dev/null
-
-# Start container with increased shared memory
-sudo docker run --gpus all -it --shm-size=8g \
-  -v $(pwd):/workspace \
-  -w /workspace \
-  --name pixel2mesh_eval \
-  pixel2mesh:latest bash
-
-# Inside container:
-cd /workspace/external/chamfer && pip install . -q
-cd /workspace && ./run_designB_eval.sh designB_full_eval 8 1
+# One-liner with performance optimizations (recommended)
+sudo docker run --gpus all --rm --shm-size=8g \
+  -v $(pwd):/workspace -w /workspace \
+  pixel2mesh:latest bash -c "
+cd /workspace/external/chamfer && pip install . -q 2>/dev/null
+cd /workspace && python entrypoint_designB_eval.py \
+  --options experiments/designB_baseline.yml \
+  --checkpoint datasets/data/pretrained/tensorflow.pth.tar \
+  --name designB_full_eval \
+  --batch-size 8 \
+  --gpus 1 \
+  --output-dir outputs/designB_meshes \
+  --warmup-iters 15 \
+  --cudnn-benchmark \
+  --tf32 \
+  --no-amp
+"
 ```
+
+### Performance CLI Arguments
+
+| Argument | Value | Purpose |
+|----------|-------|---------|
+| `--warmup-iters 15` | 15 iterations | Eliminates cold-start overhead (15× speedup) |
+| `--cudnn-benchmark` | enabled | cuDNN autotuner for optimal conv algorithms |
+| `--tf32` | enabled | TF32 tensor cores on Ampere+ GPUs |
+| `--no-amp` | disabled | AMP disabled (sparse ops don't support FP16) |
 
 ### Configuration File
 
@@ -382,6 +433,17 @@ model:
 test:
   batch_size: 8
 ```
+
+### Performance Utilities
+
+**File**: utils/perf.py
+
+Implements all GPU performance optimizations:
+- `setup_cuda_optimizations()`: cuDNN benchmark, TF32 flags
+- `warmup_model()`: GPU warmup iterations
+- `get_autocast_context()`: AMP mixed precision wrapper
+- `compile_model_safe()`: torch.compile for PyTorch 2.x
+- `CudaTimer`: CUDA event-based timing class
 
 ---
 

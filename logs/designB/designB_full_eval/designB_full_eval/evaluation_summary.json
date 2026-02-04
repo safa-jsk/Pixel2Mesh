@@ -1,115 +1,115 @@
 {
   "design": "B",
-  "timestamp": "2026-02-02T05:09:46.343702",
+  "timestamp": "2026-02-04T02:11:05.663704",
   "dataset": {
     "name": "train_tf",
     "total_samples": 43783,
     "num_classes": 13
   },
   "metrics": {
-    "chamfer_distance": 0.0004513809674660727,
-    "f1_tau": 0.6566880826726184,
-    "f1_2tau": 0.7950628453928399
+    "chamfer_distance": 0.00045139695929859755,
+    "f1_tau": 0.6566848823648067,
+    "f1_2tau": 0.795058279617602
   },
   "per_category": {
     "Airplane": {
       "category_id": "02691156",
       "samples": 4045,
-      "chamfer_distance": 0.0003808936320640416,
-      "f1_tau": 0.758840843401478,
-      "f1_2tau": 0.8463563422184689
+      "chamfer_distance": 0.00038091147404543756,
+      "f1_tau": 0.7588346626060136,
+      "f1_2tau": 0.8463527855987735
     },
     "Bench": {
       "category_id": "02828884",
       "samples": 1816,
-      "chamfer_distance": 0.00048508700615357037,
-      "f1_tau": 0.6498553656775684,
-      "f1_2tau": 0.7827463564483029
+      "chamfer_distance": 0.00048511615367182544,
+      "f1_tau": 0.6498487829963653,
+      "f1_2tau": 0.7827525762751933
     },
     "Cabinet": {
       "category_id": "02933112",
       "samples": 1572,
-      "chamfer_distance": 0.00034525190705663654,
-      "f1_tau": 0.6461036690960199,
-      "f1_2tau": 0.8062074785363401
+      "chamfer_distance": 0.0003452649316780089,
+      "f1_tau": 0.6460833659825843,
+      "f1_2tau": 0.8061995247426278
     },
     "Car": {
       "category_id": "02958343",
       "samples": 7496,
-      "chamfer_distance": 0.00025215954212890227,
-      "f1_tau": 0.6934565740171655,
-      "f1_2tau": 0.8558979482694343
+      "chamfer_distance": 0.0002521689113007057,
+      "f1_tau": 0.6934569335656082,
+      "f1_2tau": 0.8558916427831883
     },
     "Chair": {
       "category_id": "03001627",
       "samples": 6778,
-      "chamfer_distance": 0.0005244913473812657,
-      "f1_tau": 0.5866895118021894,
-      "f1_2tau": 0.7402659023242864
+      "chamfer_distance": 0.0005245012934441063,
+      "f1_tau": 0.5866962416924392,
+      "f1_2tau": 0.7402626245170842
     },
     "Display": {
       "category_id": "03211117",
       "samples": 1095,
-      "chamfer_distance": 0.0005908001299118772,
-      "f1_tau": 0.5706695778077875,
-      "f1_2tau": 0.7214282964097034
+      "chamfer_distance": 0.0005908271285187512,
+      "f1_tau": 0.5706725406004566,
+      "f1_2tau": 0.7214258740804591
     },
     "Lamp": {
       "category_id": "03636649",
       "samples": 2318,
-      "chamfer_distance": 0.0010735856186494905,
-      "f1_tau": 0.5605445322674306,
-      "f1_2tau": 0.6854250008646162
+      "chamfer_distance": 0.0010736150993772198,
+      "f1_tau": 0.5605504533730861,
+      "f1_2tau": 0.6854251681644593
     },
     "Loudspeaker": {
       "category_id": "03691459",
       "samples": 1618,
-      "chamfer_distance": 0.0006508974271820474,
-      "f1_tau": 0.5242637594031105,
-      "f1_2tau": 0.6957456728204796
+      "chamfer_distance": 0.0006509119607117673,
+      "f1_tau": 0.5242542533460414,
+      "f1_2tau": 0.6957445509552573
     },
     "Rifle": {
       "category_id": "04090263",
       "samples": 2372,
-      "chamfer_distance": 0.0003938921026484387,
-      "f1_tau": 0.7642864157871124,
-      "f1_2tau": 0.8521650517752448
+      "chamfer_distance": 0.00039391324651224824,
+      "f1_tau": 0.7642878307083746,
+      "f1_2tau": 0.8521572621307864
     },
     "Sofa": {
       "category_id": "04256520",
       "samples": 3173,
-      "chamfer_distance": 0.00044964489002086226,
-      "f1_tau": 0.5554325165516717,
-      "f1_2tau": 0.7376818116437714
+      "chamfer_distance": 0.00044965698328384296,
+      "f1_tau": 0.5554354209446035,
+      "f1_2tau": 0.7376784112473606
     },
     "Table": {
       "category_id": "04379243",
       "samples": 8509,
-      "chamfer_distance": 0.00038999666695011486,
-      "f1_tau": 0.7093395462804614,
-      "f1_2tau": 0.8307926043190773
+      "chamfer_distance": 0.0003900163085960751,
+      "f1_tau": 0.7093268414409623,
+      "f1_2tau": 0.830787210030713
     },
     "Telephone": {
       "category_id": "04401088",
       "samples": 1052,
-      "chamfer_distance": 0.00036250050117621026,
-      "f1_tau": 0.7313138478243794,
-      "f1_2tau": 0.8496772645414661
+      "chamfer_distance": 0.0003625027219236593,
+      "f1_tau": 0.7313066419187759,
+      "f1_2tau": 0.8496663031596685
     },
     "Watercraft": {
       "category_id": "04530566",
       "samples": 1939,
-      "chamfer_distance": 0.0005692298928075595,
-      "f1_tau": 0.5976521473399233,
-      "f1_2tau": 0.7400701552390456
+      "chamfer_distance": 0.0005692492533296275,
+      "f1_tau": 0.5976428478001201,
+      "f1_2tau": 0.7400577529413926
     }
   },
   "timing": {
-    "total_seconds": 808.1055951118469,
-    "total_minutes": 13.468426585197449,
-    "samples_per_second": 54.17980059145631,
-    "ms_per_sample": 18.457063132079732,
-    "avg_batch_inference_ms": 140.4786881001465
+    "total_seconds": 726.084326505661,
+    "total_minutes": 12.101405441761017,
+    "samples_per_second": 60.30015853765801,
+    "ms_per_sample": 16.583704326009205,
+    "avg_batch_inference_ms": 125.86541455341319
   },
   "mesh_generation": {
     "samples_generated": 26,
@@ -120,5 +120,16 @@
     "batch_size": 8,
     "num_gpus": 1,
     "checkpoint": "datasets/data/pretrained/tensorflow.pth.tar"
+  },
+  "performance": {
+    "warmup_iterations": 15,
+    "amp_enabled": false,
+    "torch_compile": false,
+    "cudnn_benchmark": true,
+    "tf32_enabled": true,
+    "pytorch_version": "1.12.1+cu113",
+    "cuda_available": true,
+    "cuda_version": "11.3",
+    "gpu_name": "NVIDIA GeForce RTX 4070 SUPER"
   }
 }

@@ -11,10 +11,46 @@ Metrics logged per sample/batch:
 - F1-Score @ 2*tau (2e-4)
 - Timing (per sample, per batch, total)
 
+## Design B Performance Methodology
+
+This script implements the following GPU performance optimizations:
+
+1. **GPU Warmup** (--warmup-iters): Run warmup iterations before timing to avoid
+   cold-start artifacts from CUDA context init, cuDNN autotuner, and JIT compilation.
+
+2. **AMP Mixed Precision** (--amp): Use torch.cuda.amp.autocast for faster FP16/BF16
+   inference on supported GPUs. No GradScaler needed for inference-only.
+
+3. **torch.compile** (--compile): PyTorch 2.x graph optimization via Dynamo+Inductor
+   for kernel fusion and operator optimization.
+
+4. **cuDNN Benchmark** (--cudnn-benchmark): Enable cuDNN autotuner for optimal
+   convolution algorithms with fixed input sizes.
+
+5. **TF32 Tensor Cores** (--tf32): Enable TensorFloat-32 on Ampere+ GPUs for faster
+   matrix operations with minimal accuracy impact.
+
+6. **Inference Mode**: Uses torch.inference_mode() for maximum inference performance.
+
+7. **CUDA-Correct Timing**: torch.cuda.synchronize() at timing boundaries ensures
+   accurate measurement of asynchronous GPU operations.
+
 Usage:
     python entrypoint_designB_eval.py --options experiments/designB_baseline.yml \
         --checkpoint datasets/data/pretrained/tensorflow.pth.tar \
         --name designB_full_eval
+
+    # With performance optimizations:
+    python entrypoint_designB_eval.py --options experiments/designB_baseline.yml \
+        --checkpoint datasets/data/pretrained/tensorflow.pth.tar \
+        --name designB_full_eval_optimized \
+        --warmup-iters 20 --amp --compile --cudnn-benchmark --tf32
+
+    # Disable all optimizations for reproducibility comparison:
+    python entrypoint_designB_eval.py --options experiments/designB_baseline.yml \
+        --checkpoint datasets/data/pretrained/tensorflow.pth.tar \
+        --name designB_full_eval_baseline \
+        --warmup-iters 0 --no-amp --no-compile --no-cudnn-benchmark --no-tf32
 """
 
 import argparse
@@ -23,6 +59,7 @@ import json
 import os
 import sys
 import time
+from contextlib import nullcontext
 from datetime import datetime
 from logging import Logger
 
@@ -37,6 +74,14 @@ from models.p2m import P2MModel
 from options import update_options, options, reset_options
 from utils.average_meter import AverageMeter
 from utils.mesh import Ellipsoid
+from utils.perf import (
+    setup_cuda_optimizations,
+    warmup_model,
+    get_autocast_context,
+    compile_model_safe,
+    get_perf_config_summary,
+    CudaTimer,
+)
 
 # MeshRenderer is optional (requires neural_renderer)
 try:
@@ -84,14 +129,51 @@ CATEGORY_NAMES = {
 class DesignBEvaluator(CheckpointRunner):
     """
     Design B Evaluator: Full dataset evaluation with comprehensive logging
+    
+    Performance Features (Design B Methodology):
+    - GPU warmup iterations for stable timing
+    - AMP mixed precision inference
+    - torch.compile graph optimization
+    - cuDNN/TF32 configuration
+    - CUDA-synchronized timing
     """
 
-    def __init__(self, options, logger: Logger, writer, shared_model=None):
+    def __init__(self, options, logger: Logger, writer, shared_model=None,
+                 warmup_iters: int = 15,
+                 amp_enabled: bool = False,  # Disabled: P2M sparse ops don't support half
+                 compile_enabled: bool = False,
+                 cudnn_benchmark: bool = True,
+                 tf32_enabled: bool = True):
+        
+        # Store performance configuration before parent init (which calls init_fn)
+        self.warmup_iters = warmup_iters
+        self.amp_enabled = amp_enabled
+        self.compile_enabled = compile_enabled
+        self.cudnn_benchmark = cudnn_benchmark
+        self.tf32_enabled = tf32_enabled
+        
+        # Setup CUDA optimizations early (before model creation)
+        setup_cuda_optimizations(
+            cudnn_benchmark=cudnn_benchmark,
+            tf32=tf32_enabled,
+            logger=logger
+        )
+        
         super().__init__(options, logger, writer, training=False, shared_model=shared_model)
+        
         self.sample_results = []  # Store per-sample results
         self.batch_results = []   # Store per-batch results
         self.mesh_output_dir = options.dataset.predict.folder
         os.makedirs(self.mesh_output_dir, exist_ok=True)
+        
+        # Apply torch.compile after model is loaded (in init_fn via parent __init__)
+        if self.compile_enabled:
+            self.model = compile_model_safe(
+                self.model,
+                compile_enabled=True,
+                compile_mode="max-autotune",
+                logger=logger
+            )
 
     def init_fn(self, shared_model=None, **kwargs):
         # Renderer for visualization (optional)
@@ -182,7 +264,15 @@ class DesignBEvaluator(CheckpointRunner):
         return filepath
 
     def evaluate_step(self, input_batch, batch_idx):
-        """Evaluate a single batch with detailed logging"""
+        """
+        Evaluate a single batch with detailed logging.
+        
+        Design B Performance Notes:
+        - Uses torch.inference_mode() for maximum inference performance
+        - AMP autocast for FP16/BF16 forward pass (if enabled)
+        - CUDA synchronization at timing boundaries for accurate measurement
+        - Chamfer/F1 metrics computed outside autocast to ensure FP32 precision
+        """
         self.model.eval()
         batch_size = input_batch['images'].size(0)
         batch_metrics = {
@@ -193,20 +283,28 @@ class DesignBEvaluator(CheckpointRunner):
             'meshes_saved': []
         }
 
-        with torch.no_grad():
+        # Use inference_mode for maximum performance (disables autograd entirely)
+        with torch.inference_mode():
             images = input_batch['images']
             
-            # Time the forward pass
-            torch.cuda.synchronize()
-            batch_start = time.time()
-            out = self.model(images)
-            torch.cuda.synchronize()
-            batch_inference_time = time.time() - batch_start
+            # Get autocast context based on AMP setting
+            # Note: Keep metric computation outside autocast to ensure FP32 precision
+            autocast_ctx = get_autocast_context(self.amp_enabled, "cuda")
             
-            pred_vertices = out["pred_coord"][-1]
+            # Time the forward pass with CUDA synchronization
+            # Design B: Sync before and after to measure actual GPU execution time
+            with CudaTimer() as timer:
+                with autocast_ctx:
+                    out = self.model(images)
+            
+            batch_inference_time = timer.elapsed
+            
+            # Ensure output is in FP32 for metric computation
+            # (autocast may produce FP16 outputs on some layers)
+            pred_vertices = out["pred_coord"][-1].float()
             gt_points = input_batch["points_orig"]
             if isinstance(gt_points, list):
-                gt_points = [pts.cuda() for pts in gt_points]
+                gt_points = [pts.cuda().float() for pts in gt_points]
 
             # Process each sample in the batch
             for i in range(batch_size):
@@ -260,7 +358,16 @@ class DesignBEvaluator(CheckpointRunner):
         return batch_metrics, batch_inference_time
 
     def evaluate(self):
-        """Run full evaluation with comprehensive logging"""
+        """
+        Run full evaluation with comprehensive logging.
+        
+        Design B Performance Methodology:
+        1. Log performance configuration for reproducibility
+        2. Run GPU warmup iterations before timing
+        3. Use inference_mode() throughout evaluation
+        4. Apply AMP autocast during forward passes
+        5. CUDA-synchronize at all timing boundaries
+        """
         self.logger.info("=" * 80)
         self.logger.info("DESIGN B: Full Dataset Baseline Evaluation")
         self.logger.info("=" * 80)
@@ -269,6 +376,19 @@ class DesignBEvaluator(CheckpointRunner):
         self.logger.info(f"Mesh output directory: {self.mesh_output_dir}")
         self.logger.info(f"Samples to generate meshes: 26 (2 per category)")
         self.logger.info("=" * 80)
+        
+        # Log performance configuration (Design B)
+        perf_config = get_perf_config_summary(
+            self.warmup_iters,
+            self.amp_enabled,
+            self.compile_enabled,
+            self.cudnn_benchmark,
+            self.tf32_enabled
+        )
+        self.logger.info("PERFORMANCE CONFIGURATION:")
+        for key, value in perf_config.items():
+            self.logger.info(f"  {key}: {value}")
+        self.logger.info("-" * 80)
 
         # Initialize accumulators
         self.chamfer_distance = [AverageMeter() for _ in range(self.num_classes)]
@@ -287,6 +407,35 @@ class DesignBEvaluator(CheckpointRunner):
         )
 
         total_batches = len(test_data_loader)
+        
+        # ===== GPU WARMUP (Design B Performance) =====
+        # Run warmup iterations to eliminate cold-start timing artifacts
+        # This ensures cuDNN autotuner has run and CUDA context is initialized
+        if self.warmup_iters > 0 and torch.cuda.is_available():
+            # Determine input shape from dataset
+            sample_batch = next(iter(test_data_loader))
+            input_shape = sample_batch['images'].shape
+            self.logger.info(f"Input shape for warmup: {input_shape}")
+            
+            warmup_model(
+                self.model,
+                input_shape=input_shape,
+                warmup_iters=self.warmup_iters,
+                device="cuda",
+                amp_enabled=self.amp_enabled,
+                logger=self.logger
+            )
+            
+            # Recreate dataloader iterator after consuming one batch for warmup
+            test_data_loader = DataLoader(
+                self.dataset,
+                batch_size=self.options.test.batch_size * self.options.num_gpus,
+                num_workers=self.options.num_workers,
+                pin_memory=self.options.pin_memory,
+                shuffle=False,
+                collate_fn=self.dataset_collate_fn
+            )
+        
         eval_start_time = time.time()
         meshes_saved_count = 0
 
@@ -436,7 +585,7 @@ class DesignBEvaluator(CheckpointRunner):
         self.logger.info(f"Batch results saved to: {batch_csv}")
 
     def save_summary_json(self, total_time, total_samples, avg_cd, avg_f1_tau, avg_f1_2tau):
-        """Save evaluation summary to JSON"""
+        """Save evaluation summary to JSON including performance configuration"""
         summary = {
             "design": "B",
             "timestamp": datetime.now().isoformat(),
@@ -467,7 +616,15 @@ class DesignBEvaluator(CheckpointRunner):
                 "batch_size": self.options.test.batch_size,
                 "num_gpus": self.options.num_gpus,
                 "checkpoint": self.options.checkpoint
-            }
+            },
+            # Design B Performance Configuration
+            "performance": get_perf_config_summary(
+                self.warmup_iters,
+                self.amp_enabled,
+                self.compile_enabled,
+                self.cudnn_benchmark,
+                self.tf32_enabled
+            )
         }
         
         # Add per-category metrics
@@ -488,7 +645,20 @@ class DesignBEvaluator(CheckpointRunner):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Design B: Full Dataset Baseline Evaluation')
+    """
+    Parse command-line arguments for Design B evaluation.
+    
+    Performance Flags (Design B Methodology):
+    - --warmup-iters: GPU warmup iterations before timing (default: 15)
+    - --amp/--no-amp: Enable/disable AMP mixed precision (default: enabled)
+    - --compile/--no-compile: Enable/disable torch.compile (default: disabled)
+    - --cudnn-benchmark/--no-cudnn-benchmark: cuDNN autotuner (default: enabled)
+    - --tf32/--no-tf32: TF32 tensor cores on Ampere+ (default: enabled)
+    """
+    parser = argparse.ArgumentParser(
+        description='Design B: Full Dataset Baseline Evaluation',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument('--options', help='experiment options file name', required=False, type=str)
 
     args, rest = parser.parse_known_args()
@@ -497,12 +667,87 @@ def parse_args():
     else:
         update_options(args.options)
 
+    # Standard evaluation arguments
     parser.add_argument('--batch-size', help='batch size', type=int)
     parser.add_argument('--checkpoint', help='trained checkpoint file', type=str, required=True)
     parser.add_argument('--version', help='version of task (timestamp by default)', type=str)
     parser.add_argument('--name', help='subfolder name of this experiment', required=True, type=str)
     parser.add_argument('--gpus', help='number of GPUs to use', type=int)
     parser.add_argument('--output-dir', help='directory to save generated meshes', type=str)
+
+    # ===== DESIGN B PERFORMANCE FLAGS =====
+    # These flags control GPU performance optimizations.
+    # Each can be disabled for reproducibility comparisons.
+    
+    # GPU Warmup: Eliminates cold-start timing artifacts
+    parser.add_argument(
+        '--warmup-iters', 
+        type=int, 
+        default=15,
+        help='Number of GPU warmup iterations before timing (0 to disable)'
+    )
+    
+    # AMP Mixed Precision: FP16/BF16 for faster inference
+    # NOTE: Disabled by default for Pixel2Mesh because sparse graph convolutions
+    # (addmm_sparse_cuda) don't support half precision. Enable only if model is modified.
+    parser.add_argument(
+        '--amp', 
+        dest='amp_enabled',
+        action='store_true',
+        default=False,
+        help='Enable AMP mixed precision inference (disabled by default - sparse ops unsupported)'
+    )
+    parser.add_argument(
+        '--no-amp', 
+        dest='amp_enabled',
+        action='store_false',
+        help='Disable AMP mixed precision'
+    )
+    
+    # torch.compile: PyTorch 2.x graph optimization
+    parser.add_argument(
+        '--compile', 
+        dest='compile_enabled',
+        action='store_true',
+        default=False,
+        help='Enable torch.compile (PyTorch 2.x, may increase first-run time)'
+    )
+    parser.add_argument(
+        '--no-compile', 
+        dest='compile_enabled',
+        action='store_false',
+        help='Disable torch.compile'
+    )
+    
+    # cuDNN Benchmark: Autotuner for optimal conv algorithms
+    parser.add_argument(
+        '--cudnn-benchmark', 
+        dest='cudnn_benchmark',
+        action='store_true',
+        default=True,
+        help='Enable cuDNN benchmark mode (best for fixed input sizes)'
+    )
+    parser.add_argument(
+        '--no-cudnn-benchmark', 
+        dest='cudnn_benchmark',
+        action='store_false',
+        help='Disable cuDNN benchmark mode'
+    )
+    
+    # TF32: TensorFloat-32 on Ampere+ GPUs
+    parser.add_argument(
+        '--tf32', 
+        dest='tf32_enabled',
+        action='store_true',
+        default=True,
+        help='Enable TF32 tensor core math (Ampere+ GPUs)'
+    )
+    parser.add_argument(
+        '--no-tf32', 
+        dest='tf32_enabled',
+        action='store_false',
+        help='Disable TF32'
+    )
 
     args = parser.parse_args()
 
@@ -522,8 +767,26 @@ def main():
     logger.info(f"Options file: {args.options}")
     logger.info(f"Checkpoint: {args.checkpoint}")
     logger.info(f"Output directory: {options.dataset.predict.folder}")
+    
+    # Log performance settings
+    logger.info("Performance settings:")
+    logger.info(f"  warmup_iters: {args.warmup_iters}")
+    logger.info(f"  amp_enabled: {args.amp_enabled}")
+    logger.info(f"  compile_enabled: {args.compile_enabled}")
+    logger.info(f"  cudnn_benchmark: {args.cudnn_benchmark}")
+    logger.info(f"  tf32_enabled: {args.tf32_enabled}")
 
-    evaluator = DesignBEvaluator(options, logger, writer)
+    # Create evaluator with performance settings
+    evaluator = DesignBEvaluator(
+        options, 
+        logger, 
+        writer,
+        warmup_iters=args.warmup_iters,
+        amp_enabled=args.amp_enabled,
+        compile_enabled=args.compile_enabled,
+        cudnn_benchmark=args.cudnn_benchmark,
+        tf32_enabled=args.tf32_enabled
+    )
     evaluator.evaluate()
 
 
