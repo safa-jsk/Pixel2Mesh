@@ -1,14 +1,14 @@
 # Design A: Baseline Pixel2Mesh Evaluation Summary
 
-**Date**: January 29-30, 2026  
-**Evaluation ID**: designa_vgg_baseline_0129222712  
+**Date**: February 5, 2026  
+**Evaluation ID**: designa_vgg_baseline_0205034819  
 **Purpose**: Reproduce baseline Pixel2Mesh on ShapeNet data_tf with VGG16 backbone (no algorithmic changes)
 
 ---
 
 ## Executive Summary
 
-Successfully completed Design A baseline evaluation on 43,784 test samples from ShapeNet dataset. The evaluation ran for 35.33 minutes on NVIDIA GeForce RTX 2050 GPU, achieving Chamfer Distance of 0.000498, F1@τ of 64.22%, and F1@2τ of 78.03%. These metrics establish the baseline performance for comparison with Design B (optimizations) and Design C (domain shift).
+Successfully completed Design A baseline evaluation on 43,784 test samples from ShapeNet dataset. The evaluation ran for **33.43 minutes** on **NVIDIA GeForce RTX 4070 SUPER** GPU, achieving Chamfer Distance of **0.000498**, F1@τ of **64.22%**, and F1@2τ of **78.03%**. These metrics establish the baseline performance for comparison with Design B (optimizations) and Design C (domain shift).
 
 ---
 
@@ -16,11 +16,11 @@ Successfully completed Design A baseline evaluation on 43,784 test samples from 
 
 ### Hardware Environment
 
-- **GPU**: NVIDIA GeForce RTX 2050
-  - Memory: 4 GB GDDR6
-  - CUDA Compute Capability: 8.6
-  - Driver Version: 580.126.09
-  - CUDA Version: 13.0 (runtime: 11.3.1 in container)
+- **GPU**: NVIDIA GeForce RTX 4070 SUPER
+  - Memory: 12 GB GDDR6X
+  - CUDA Compute Capability: 8.9
+  - Driver Version: 590.48.01
+  - CUDA Version: 13.1 (runtime: 11.3.1 in container)
 - **Host OS**: Ubuntu 22.04 LTS
 - **CPU**: (Intel/AMD, details from system)
 - **RAM**: 16 GB+ (recommended for data loading)
@@ -155,10 +155,10 @@ test:
 
 | Metric                    | Value                  | Description                                         |
 | ------------------------- | ---------------------- | --------------------------------------------------- |
-| **Total Evaluation Time** | **35.33 minutes**      | Wall-clock time for full test set (2119.69 seconds) |
-| **Inference Time (avg)**  | **265.81 ms**          | Average forward pass time per image                 |
-| **Batch Processing Time** | **0.2843 seconds**     | Time per batch including data loading and metrics   |
-| **Throughput**            | **3.76 images/second** | Processing speed                                    |
+| **Total Evaluation Time** | **33.43 minutes**      | Wall-clock time for full test set (2006.04 seconds) |
+| **Inference Time (avg)**  | **253.35 ms**          | Average forward pass time per image                 |
+| **Batch Processing Time** | **268.8 ms**           | Time per batch including data loading and metrics   |
+| **Throughput**            | **3.95 images/second** | Processing speed                                    |
 | **Total Samples**         | **43,784**             | Complete test_tf dataset                            |
 | **Total Batches**         | **5,473**              | Number of batches processed (batch_size=8)          |
 
@@ -245,9 +245,9 @@ test:
 
 ### Evaluation Timeline
 
-- **Start Time**: 2026-01-29 22:27:12
-- **End Time**: 2026-01-29 23:02:33
-- **Duration**: 35 minutes 21 seconds
+- **Start Time**: 2026-02-05 03:48:19
+- **End Time**: 2026-02-05 04:21:53
+- **Duration**: 33 minutes 26 seconds
 
 ### Progress Samples (First 5 Batches)
 
@@ -281,18 +281,18 @@ Batch 5470: CD=0.000451, F1@τ=65.67%, F1@2τ=79.51%
 
 ### Log Files
 
-- **Primary Log**: logs/designA/designA_vgg_baseline/designa_vgg_baseline_0129222712_eval.log
-  - Size: 1168 lines
+- **Primary Log**: logs/designA/designA_vgg_baseline/designa_vgg_baseline_0205034819_eval.log
+  - Size: 1184 lines
   - Contains: Full evaluation trace with per-batch metrics
 
 ### Checkpoint Directories
 
-- **Checkpoint Dir**: checkpoints/designA/designA_vgg_baseline/designa_vgg_baseline_0129222712/
+- **Checkpoint Dir**: checkpoints/designA/designA_vgg_baseline/designa_vgg_baseline_0205034819/
   - Purpose: Store evaluation run metadata (no new checkpoints saved during eval)
 
 ### TensorBoard Summaries
 
-- **Summary Dir**: summary/designA/designA_vgg_baseline/designa_vgg_baseline_0129222712/
+- **Summary Dir**: summary/designA/designA_vgg_baseline/designa_vgg_baseline_0205034819/
   - Contains: TensorBoard event files with scalar metrics and rendered mesh previews
   - View with: `tensorboard --logdir=summary/designA`
 
@@ -474,8 +474,8 @@ After Design B stabilization:
 ## 15. Contact and Maintenance
 
 **Evaluator**: Safa JSK  
-**Date**: January 29-30, 2026  
-**System**: Pulsar (Ubuntu 22.04, RTX 2050)  
+**Date**: February 5, 2026  
+**System**: Ubuntu 22.04, RTX 4070 SUPER  
 **Purpose**: MS Thesis - Design A Baseline Implementation
 
 **Files Location**:
@@ -492,7 +492,7 @@ After Design B stabilization:
 ```python
 {
   'checkpoint': 'datasets/data/pretrained/tensorflow.pth.tar',
-  'checkpoint_dir': 'checkpoints/designA/designA_vgg_baseline/designa_vgg_baseline_0129222712',
+  'checkpoint_dir': 'checkpoints/designA/designA_vgg_baseline/designa_vgg_baseline_0205034819',
   'dataset': {
     'camera_c': [112.0, 112.0],
     'camera_f': [250.0, 250.0],
@@ -545,7 +545,7 @@ After Design B stabilization:
     'wd': 1e-06
   },
   'pin_memory': True,
-  'summary_dir': 'summary/designA/designA_vgg_baseline/designa_vgg_baseline_0129222712',
+  'summary_dir': 'summary/designA/designA_vgg_baseline/designa_vgg_baseline_0205034819',
   'test': {
     'batch_size': 8,
     'dataset': [],
@@ -562,12 +562,12 @@ After Design B stabilization:
     'test_epochs': 1,
     'use_augmentation': True
   },
-  'version': 'designa_vgg_baseline_0129222712'
+  'version': 'designa_vgg_baseline_0205034819'
 }
 ```
 
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: January 30, 2026  
-**Status**: Design A Complete - Ready for Design B Implementation
+**Last Updated**: February 5, 2026  
+**Status**: Design A Complete

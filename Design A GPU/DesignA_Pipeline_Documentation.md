@@ -2,7 +2,7 @@
 
 **Project:** Pixel2Mesh Baseline Reproduction  
 **Design ID:** Design A  
-**Date:** January 29-30, 2026  
+**Date:** February 5, 2026  
 **Status:** ✅ Complete  
 **Purpose:** Establish baseline performance metrics for Pixel2Mesh on ShapeNet dataset
 
@@ -723,8 +723,9 @@ ls datasets/examples_for_poster/*.3.obj | wc -l      # Should be 26
 - **Chamfer Distance**: 0.000498 ± 0.00001
 - **F1-Score @ τ**: 64.22% ± 0.5%
 - **F1-Score @ 2τ**: 78.03% ± 0.5%
-- **Inference Time**: 265.81 ms/image ± 5 ms
-- **Total Time**: 35-36 minutes (depending on hardware)
+- **Inference Time**: 253.35 ms/image
+- **Total Time**: ~33-34 minutes (on RTX 4070 SUPER)
+- **Throughput**: 3.95 img/sec
 
 **Mesh Generation:**
 

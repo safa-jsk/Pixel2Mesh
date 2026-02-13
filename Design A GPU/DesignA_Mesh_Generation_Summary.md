@@ -1,7 +1,7 @@
 # Design A: Mesh Generation Summary
 
-**Date**: January 30, 2026  
-**Generation ID**: designa_vgg_baseline_0129232213  
+**Date**: February 5, 2026  
+**Generation ID**: designa_vgg_baseline_0205034819  
 **Purpose**: Generate qualitative mesh reconstructions for thesis poster and report
 
 ---
@@ -16,7 +16,7 @@ Successfully generated 26 high-quality 3D mesh reconstructions from sample image
 
 ### System Setup
 
-- **GPU**: NVIDIA GeForce RTX 2050 (4 GB VRAM)
+- **GPU**: NVIDIA GeForce RTX 4070 SUPER (12 GB VRAM)
 - **Container**: p2m:designA (Docker with CUDA 11.3.1)
 - **Python**: 3.8.10
 - **PyTorch**: 1.12.1+cu113
@@ -491,21 +491,21 @@ predictor.predict()  # Output: datasets/examples_for_poster/*.obj
 
 ### Log Files
 
-- **Main Log**: logs/designA/designA_poster_samples/designa_vgg_baseline_0129232213_predict.log
+- **Main Log**: logs/designA/designA_poster_samples/designa_vgg_baseline_0205034819_predict.log
 - **Checkpoints**: checkpoints/designA/designA_poster_samples/
 - **Summaries**: summary/designA/designA_poster_samples/
 
 ### Generation Metadata
 
 ```yaml
-timestamp: 2026-01-29 23:22:13
+timestamp: 2026-02-05
 duration: 75 seconds
 samples: 26
 categories: 13
 avg_time_per_mesh: 2.88 seconds
 checkpoint: tensorflow.pth.tar (SHA256: f3ded3b0...)
 batch_size: 8
-gpu: NVIDIA GeForce RTX 2050
+gpu: NVIDIA GeForce RTX 4070 SUPER
 ```
 
 ---
@@ -598,6 +598,6 @@ Note: This is correct behavior for demo mode
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: January 30, 2026  
+**Last Updated**: February 5, 2026  
 **Status**: Mesh Generation Complete - Ready for Poster Rendering  
-**Location**: /home/safa-jsk/Documents/Pixel2Mesh/DesignA_Mesh_Generation_Summary.md
+**Location**: /datalust/Pixel2Mesh/DesignA_Mesh_Generation_Summary.md

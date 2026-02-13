@@ -1,4 +1,4 @@
-\"\"\"
+"""
 Pixel2Mesh Evaluation Entrypoint with Design B Performance Optimizations
 =========================================================================
 
@@ -8,7 +8,7 @@ Performance Flags:
 - --compile/--no-compile: torch.compile (default: disabled)
 - --cudnn-benchmark/--no-cudnn-benchmark: cuDNN autotuner (default: enabled)
 - --tf32/--no-tf32: TF32 tensor cores (default: enabled)
-\"\"\"
+"""
 import argparse
 import sys
 
