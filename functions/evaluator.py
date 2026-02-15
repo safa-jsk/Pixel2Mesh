@@ -1,3 +1,4 @@
+"""Pixel2Mesh Evaluator with Design B Performance Optimizations"""
 from logging import Logger
 import time
 
@@ -13,12 +14,59 @@ from models.p2m import P2MModel
 from utils.average_meter import AverageMeter
 from utils.mesh import Ellipsoid
 from utils.vis.renderer import MeshRenderer
+from utils.perf import (
+    setup_cuda_optimizations,
+    warmup_model,
+    get_autocast_context,
+    compile_model_safe,
+    get_perf_config_summary,
+    CudaTimer,
+)
 
 
 class Evaluator(CheckpointRunner):
+    """
+    Pixel2Mesh Evaluator with Design B Performance Optimizations.
+    
+    Performance Features:
+    - GPU warmup iterations for stable timing
+    - AMP mixed precision inference
+    - torch.compile graph optimization (PyTorch 2.x)
+    - cuDNN/TF32 configuration
+    - CUDA-synchronized timing
+    """
 
-    def __init__(self, options, logger: Logger, writer, shared_model=None):
+    def __init__(self, options, logger: Logger, writer, shared_model=None,
+                 warmup_iters: int = 15,
+                 amp_enabled: bool = False,  # Disabled: P2M sparse ops don't support half
+                 compile_enabled: bool = False,
+                 cudnn_benchmark: bool = True,
+                 tf32_enabled: bool = True):
+        
+        # Store performance configuration before parent init
+        self.warmup_iters = warmup_iters
+        self.amp_enabled = amp_enabled
+        self.compile_enabled = compile_enabled
+        self.cudnn_benchmark = cudnn_benchmark
+        self.tf32_enabled = tf32_enabled
+        
+        # Setup CUDA optimizations early
+        setup_cuda_optimizations(
+            cudnn_benchmark=cudnn_benchmark,
+            tf32=tf32_enabled,
+            logger=logger
+        )
+        
         super().__init__(options, logger, writer, training=False, shared_model=shared_model)
+        
+        # Apply torch.compile after model is loaded
+        if self.compile_enabled:
+            self.model = compile_model_safe(
+                self.model,
+                compile_enabled=True,
+                compile_mode="max-autotune",
+                logger=logger
+            )
 
     # noinspection PyAttributeOutsideInit
     def init_fn(self, shared_model=None, **kwargs):
@@ -98,27 +146,35 @@ class Evaluator(CheckpointRunner):
                 self.acc_5.update(acc)
 
     def evaluate_step(self, input_batch):
+        """
+        Run single evaluation step with Design B performance optimizations.
+        
+        Uses torch.inference_mode() and optional AMP autocast for maximum
+        inference performance. CUDA synchronization ensures accurate timing.
+        """
         self.model.eval()
 
-        # Run inference
-        with torch.no_grad():
+        # Run inference with inference_mode for maximum performance
+        with torch.inference_mode():
             # Get ground truth
             images = input_batch['images']
+            
+            # Get autocast context based on AMP setting
+            autocast_ctx = get_autocast_context(self.amp_enabled, "cuda")
 
-            # Time the forward pass (CPU inference)
-            inference_start = time.time()
-            out = self.model(images)  # Model runs on CPU
-            inference_end = time.time()
-            self.inference_time.update(inference_end - inference_start, images.size(0))
+            # Time the forward pass with CUDA synchronization
+            with CudaTimer() as timer:
+                with autocast_ctx:
+                    out = self.model(images)
+            
+            self.inference_time.update(timer.elapsed, images.size(0))
 
             if self.options.model.name == "pixel2mesh":
-                pred_vertices = out["pred_coord"][-1]
-                # Move pred_vertices to GPU for chamfer distance computation
-                pred_vertices = pred_vertices.cuda()
-                
+                # Ensure FP32 for metric computation
+                pred_vertices = out["pred_coord"][-1].float()
                 gt_points = input_batch["points_orig"]
                 if isinstance(gt_points, list):
-                    gt_points = [pts.cuda() for pts in gt_points]
+                    gt_points = [pts.cuda().float() for pts in gt_points]
                 self.evaluate_chamfer_and_f1(pred_vertices, gt_points, input_batch["labels"])
             elif self.options.model.name == "classifier":
                 self.evaluate_accuracy(out, input_batch["labels"])
@@ -127,7 +183,25 @@ class Evaluator(CheckpointRunner):
 
     # noinspection PyAttributeOutsideInit
     def evaluate(self):
+        """
+        Run full evaluation with Design B performance optimizations.
+        
+        Includes GPU warmup, performance configuration logging, and
+        CUDA-correct timing throughout.
+        """
         self.logger.info("Running evaluations...")
+        
+        # Log performance configuration
+        perf_config = get_perf_config_summary(
+            self.warmup_iters,
+            self.amp_enabled,
+            self.compile_enabled,
+            self.cudnn_benchmark,
+            self.tf32_enabled
+        )
+        self.logger.info("Performance configuration:")
+        for key, value in perf_config.items():
+            self.logger.info(f"  {key}: {value}")
 
         # clear evaluate_step_count, but keep total count uncleared
         self.evaluate_step_count = 0
@@ -150,6 +224,31 @@ class Evaluator(CheckpointRunner):
         # Timing metrics
         self.inference_time = AverageMeter()  # Time for forward pass only
         self.batch_time = AverageMeter()  # Time for entire batch processing
+        
+        # ===== GPU WARMUP (Design B Performance) =====
+        if self.warmup_iters > 0 and torch.cuda.is_available():
+            # Get input shape from first batch
+            sample_batch = next(iter(test_data_loader))
+            input_shape = sample_batch['images'].shape
+            self.logger.info(f"Input shape for warmup: {input_shape}")
+            
+            warmup_model(
+                self.model,
+                input_shape=input_shape,
+                warmup_iters=self.warmup_iters,
+                device="cuda",
+                amp_enabled=self.amp_enabled,
+                logger=self.logger
+            )
+            
+            # Recreate dataloader iterator
+            test_data_loader = DataLoader(self.dataset,
+                                          batch_size=self.options.test.batch_size * self.options.num_gpus,
+                                          num_workers=self.options.num_workers,
+                                          pin_memory=self.options.pin_memory,
+                                          shuffle=self.options.test.shuffle,
+                                          collate_fn=self.dataset_collate_fn)
+        
         self.eval_start_time = time.time()
 
         # Iterate over all batches in an epoch
