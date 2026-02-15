@@ -1,0 +1,27 @@
+metric_name,value,unit,description
+design,A,,Hybrid CPU+GPU baseline implementation
+evaluation_date,2026-02-02,,Date of evaluation run
+evaluation_id,designa_vgg_baseline_0202000035,,Unique evaluation identifier
+checkpoint,tensorflow.pth.tar,,Checkpoint filename
+dataset,test_tf,,ShapeNet test subset
+total_samples,43784,samples,Total number of test samples
+total_batches,5473,batches,Total number of batches processed (batch_size=8)
+chamfer_distance,0.000498,,Average bidirectional point-to-mesh distance (lower is better)
+f1_score_tau,64.22,%,F1-Score at threshold τ (higher is better)
+f1_score_2tau,78.03,%,F1-Score at relaxed threshold 2τ (higher is better)
+total_time_seconds,7765.27,seconds,Total wall-clock evaluation time
+total_time_minutes,129.42,minutes,Total evaluation time in minutes
+avg_inference_time_ms,1290.98,ms,Average forward pass time per image (CPU-based)
+avg_batch_time_seconds,1.3057,seconds,Average batch processing time including data loading
+throughput_images_per_sec,0.77,images/sec,Processing speed (images per second)
+model_device,CPU,,Model inference device
+metrics_device,GPU,,Chamfer distance computation device
+gpu_model,RTX 2050,,NVIDIA GPU model
+gpu_memory,4,GB,GPU VRAM
+batch_size,8,samples,Evaluation batch size
+num_workers,4,workers,DataLoader parallel workers
+backbone,VGG16,,Image feature extraction backbone
+hidden_dim,256,,GCN hidden dimensions
+coord_dim,3,,Coordinate dimensions (X Y Z)
+num_deform_stages,3,,Number of mesh deformation stages (156→628→2466 vertices)
+align_with_tensorflow,True,,TensorFlow compatibility mode enabled
