@@ -138,6 +138,7 @@ class DesignBEvaluator(CheckpointRunner):
     - CUDA-synchronized timing
     """
 
+    # [DESIGN.B][CAMFM.A5_METHOD] Reproducible evaluation configuration with explicit performance flags
     def __init__(self, options, logger: Logger, writer, shared_model=None,
                  warmup_iters: int = 15,
                  amp_enabled: bool = False,  # Disabled: P2M sparse ops don't support half
@@ -152,7 +153,7 @@ class DesignBEvaluator(CheckpointRunner):
         self.cudnn_benchmark = cudnn_benchmark
         self.tf32_enabled = tf32_enabled
         
-        # Setup CUDA optimizations early (before model creation)
+        # [DESIGN.B][CAMFM.A2d_OPTIONAL_ACCEL] Setup CUDA optimizations early (before model creation)
         setup_cuda_optimizations(
             cudnn_benchmark=cudnn_benchmark,
             tf32=tf32_enabled,
@@ -195,6 +196,7 @@ class DesignBEvaluator(CheckpointRunner):
         if shared_model is not None:
             self.model = shared_model
         else:
+            # [DESIGN.B][CAMFM.A2a_GPU_RESIDENCY] Model fully on GPU (no CPU fallbacks)
             self.model = P2MModel(
                 self.options.model,
                 self.ellipsoid,
@@ -291,7 +293,7 @@ class DesignBEvaluator(CheckpointRunner):
             # Note: Keep metric computation outside autocast to ensure FP32 precision
             autocast_ctx = get_autocast_context(self.amp_enabled, "cuda")
             
-            # Time the forward pass with CUDA synchronization
+            # [DESIGN.B][CAMFM.A2b_STEADY_STATE] Time the forward pass with CUDA synchronization
             # Design B: Sync before and after to measure actual GPU execution time
             with CudaTimer() as timer:
                 with autocast_ctx:
@@ -299,7 +301,7 @@ class DesignBEvaluator(CheckpointRunner):
             
             batch_inference_time = timer.elapsed
             
-            # Ensure output is in FP32 for metric computation
+            # [DESIGN.B][CAMFM.A2c_MEM_LAYOUT] Ensure output is in FP32 for metric computation
             # (autocast may produce FP16 outputs on some layers)
             pred_vertices = out["pred_coord"][-1].float()
             gt_points = input_batch["points_orig"]
@@ -314,7 +316,7 @@ class DesignBEvaluator(CheckpointRunner):
                 filename = input_batch["filename"][i]
                 label = input_batch["labels"][i].cpu().item()
                 
-                # Compute metrics
+                # [DESIGN.B][CAMFM.A3_METRICS] Compute metrics (chamfer, F1)
                 cd, f1_tau, f1_2tau = self.compute_sample_metrics(
                     pred_vertices[i],
                     gt_points[i],
@@ -334,7 +336,7 @@ class DesignBEvaluator(CheckpointRunner):
                 self.f1_tau[label].update(f1_tau)
                 self.f1_2tau[label].update(f1_2tau)
                 
-                # Check if we should save mesh for this sample
+                # [DESIGN.B][CAMFM.A3_METRICS] Check if we should save mesh for this sample (26 samples)
                 should_save, cat_id, obj_id = self.should_save_mesh(filename)
                 if should_save:
                     # Save all 3 stages

@@ -96,7 +96,7 @@ class Evaluator(CheckpointRunner):
                 self.model = Classifier(self.options.model, self.options.dataset.num_classes)
             else:
                 raise NotImplementedError("Your model is not found")
-            # Design A: Run model on CPU, keep chamfer/renderer on GPU
+            # [DESIGN.A][STAGE.MODEL_INFERENCE] Design A: Run model on CPU, keep chamfer/renderer on GPU
             self.logger.info("Design A: Model will run on CPU, chamfer/renderer on GPU")
             # Do NOT move model to GPU - keep on CPU
             # self.model = torch.nn.DataParallel(self.model, device_ids=self.gpus).cuda()

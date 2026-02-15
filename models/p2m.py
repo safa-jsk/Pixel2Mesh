@@ -47,6 +47,7 @@ class P2MModel(nn.Module):
         self.gconv = GConv(in_features=self.last_hidden_dim, out_features=self.coord_dim,
                            adj_mat=ellipsoid.adj_mat[2])
 
+    # [DESIGN.B][STAGE.MODEL_INFERENCE] Main forward pass: VGG16 feature extraction + 3-stage GCN deformation
     def forward(self, img):
         batch_size = img.size(0)
         img_feats = self.nn_encoder(img)

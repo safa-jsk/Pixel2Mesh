@@ -1,6 +1,13 @@
 #!/bin/bash
 # Generate sample meshes from each ShapeNet category for poster
 
+# Ensure we're in the project root
+if [ ! -d "datasets/data/shapenet" ]; then
+    echo "ERROR: Must run from project root directory"
+    echo "Usage: ./scripts/evaluation/generate_sample_meshes.sh"
+    exit 1
+fi
+
 echo "Creating sample images directory..."
 mkdir -p datasets/examples_for_poster
 

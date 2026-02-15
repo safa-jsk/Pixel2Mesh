@@ -20,6 +20,13 @@
 
 set -e
 
+# Ensure we're in the project root
+if [ ! -f "entrypoint_designB_eval.py" ]; then
+    echo "ERROR: Must run from project root directory"
+    echo "Usage: ./scripts/evaluation/run_designB_eval.sh [name] [batch_size] [gpus]"
+    exit 1
+fi
+
 # Configuration
 EXPERIMENT_NAME="${1:-designB_full_eval}"
 CHECKPOINT="datasets/data/pretrained/tensorflow.pth.tar"

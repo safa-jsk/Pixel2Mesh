@@ -4,13 +4,13 @@ services:
   pixel2mesh:
     image: pixel2mesh:latest
     build:
-      context: .
+      context: ../..
       dockerfile: Dockerfile
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
-      - .:/workspace
+      - ../..:/workspace
     working_dir: /workspace
     stdin_open: true
     tty: true

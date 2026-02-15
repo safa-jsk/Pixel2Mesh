@@ -1,6 +1,7 @@
 # Docker Setup Guide for Pixel2Mesh
 
 ## Prerequisites
+
 - Docker installed
 - NVIDIA GPU with CUDA 11.3+ support
 - NVIDIA drivers installed on Linux host
@@ -15,6 +16,7 @@
 ```
 
 This script will:
+
 1. Verify NVIDIA drivers are installed
 2. Install NVIDIA Container Toolkit
 3. Configure Docker to use NVIDIA runtime
@@ -22,6 +24,7 @@ This script will:
 5. Test GPU access
 
 **Manual installation (if script fails):**
+
 ```bash
 # Add NVIDIA package repositories
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
@@ -47,17 +50,21 @@ sudo docker run --rm --gpus all nvidia/cuda:11.3.1-base-ubuntu20.04 nvidia-smi
 ## Building the Docker Image
 
 ### Option 1: Using the build script (Recommended)
+
 ```bash
-chmod +x docker-build.sh
-./docker-build.sh
+chmod +x scripts/docker/docker-build.sh
+./scripts/docker/docker-build.sh
 ```
 
 ### Option 2: Using docker-compose
+
 ```bash
+cd scripts/docker
 sudo docker-compose build
 ```
 
 ### Option 3: Manual build
+
 ```bash
 sudo docker build -t pixel2mesh:latest .
 ```
@@ -67,16 +74,19 @@ sudo docker build -t pixel2mesh:latest .
 ## Running the Container
 
 ### Interactive shell
+
 ```bash
 sudo docker run --gpus all -it --rm -v $(pwd):/workspace pixel2mesh:latest bash
 ```
 
 ### Using docker-compose
+
 ```bash
 sudo docker-compose run --rm pixel2mesh
 ```
 
 ### Run training
+
 ```bash
 sudo docker run --gpus all -it --rm \
   -v $(pwd):/workspace \
@@ -85,6 +95,7 @@ sudo docker run --gpus all -it --rm \
 ```
 
 ### Run evaluation
+
 ```bash
 sudo docker run --gpus all -it --rm \
   -v $(pwd):/workspace \
@@ -93,6 +104,7 @@ sudo docker run --gpus all -it --rm \
 ```
 
 ### Run prediction
+
 ```bash
 sudo docker run --gpus all -it --rm \
   -v $(pwd):/workspace \
@@ -101,13 +113,17 @@ sudo docker run --gpus all -it --rm \
 ```
 
 ## Volume Mounts
+
 The `-v $(pwd):/workspace` flag mounts the current directory into the container at `/workspace`, allowing the container to:
+
 - Read/write datasets from `datasets/data/`
 - Save checkpoints and results
 - Access configuration files
 
 ## GPU Access
+
 The `--gpus all` flag enables GPU access in the container. Ensure:
+
 - NVIDIA drivers are installed on the host
 - nvidia-docker2 is installed
 - Docker daemon is running with GPU support
@@ -115,28 +131,36 @@ The `--gpus all` flag enables GPU access in the container. Ensure:
 ## Troubleshooting
 
 ### GPU Error: "could not select device driver"
+
 **Error:** `docker: Error response from daemon: could not select device driver "" with capabilities: [[gpu]]`
 
 **Solution:** NVIDIA Container Toolkit is not installed. Run:
+
 ```bash
 ./setup-nvidia-docker.sh
 ```
 
 ### Permission Issues
+
 If you encounter permission errors:
+
 ```bash
 sudo usermod -aG docker $USER
 # Log out and log back in
 ```
 
 ### GPU Not Detected
+
 Check NVIDIA Docker runtime:
+
 ```bash
 sudo docker run --rm --gpus all nvidia/cuda:11.3.1-base-ubuntu20.04 nvidia-smi
 ```
 
 ### Build Fails with GPG Errors
+
 The Dockerfile includes fixes for common GPG key issues with CUDA base images. If problems persist, try:
+
 ```bash
 sudo docker build --no-cache -t pixel2mesh:latest .
 ```
@@ -151,18 +175,23 @@ sudo docker build --no-cache -t pixel2mesh:latest .
 ## Customization
 
 ### Modify Python packages
+
 Edit the `Dockerfile` and add packages:
+
 ```dockerfile
 RUN pip install your-package-name
 ```
 
 Then rebuild:
+
 ```bash
-./docker-build.sh
+./scripts/docker/docker-build.sh
 ```
 
 ### Change CUDA version
+
 Modify the FROM line in `Dockerfile`:
+
 ```dockerfile
 FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
 ```

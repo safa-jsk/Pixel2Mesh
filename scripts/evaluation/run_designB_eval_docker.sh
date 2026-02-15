@@ -31,4 +31,4 @@ docker run --gpus all -it --rm \
     -v "$WORKSPACE:/workspace" \
     -w /workspace \
     pixel2mesh:latest \
-    bash -c "chmod +x run_designB_eval.sh && ./run_designB_eval.sh $EXPERIMENT_NAME $BATCH_SIZE $GPUS"
+    bash -c "chmod +x scripts/evaluation/run_designB_eval.sh && ./scripts/evaluation/run_designB_eval.sh $EXPERIMENT_NAME $BATCH_SIZE $GPUS"

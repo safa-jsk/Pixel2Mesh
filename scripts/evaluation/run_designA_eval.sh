@@ -2,6 +2,13 @@
 # Design A Evaluation Runner
 # This script runs evaluation inside the Docker container with GPU support
 
+# Ensure we're in the project root
+if [ ! -f "entrypoint_eval.py" ]; then
+    echo "ERROR: Must run from project root directory"
+    echo "Usage: ./scripts/evaluation/run_designA_eval.sh"
+    exit 1
+fi
+
 echo "Starting Design A evaluation in Docker container..."
 echo "Dataset: ShapeNet test_tf (43,784 samples)"
 echo "Checkpoint: tensorflow.pth.tar (VGG16 baseline)"

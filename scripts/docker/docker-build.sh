@@ -4,6 +4,8 @@
 echo "Building Pixel2Mesh Docker image..."
 echo "This may take 10-15 minutes on first build (downloading ~2GB base image)"
 
+# Build from project root (two levels up from scripts/docker/)
+cd "$(dirname "$0")/../.."
 sudo docker build -t pixel2mesh:latest .
 
 if [ $? -eq 0 ]; then

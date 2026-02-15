@@ -1,6 +1,13 @@
 #!/bin/bash
 # Run Pixel2Mesh prediction to generate mesh OBJ files
 
+# Ensure we're in the project root
+if [ ! -f "entrypoint_predict.py" ]; then
+    echo "ERROR: Must run from project root directory"
+    echo "Usage: ./scripts/evaluation/run_designA_predict.sh"
+    exit 1
+fi
+
 echo "Running Design A prediction to generate meshes..."
 echo "Output will be saved to: outputs/designA_predictions/"
 echo ""

@@ -79,6 +79,7 @@ def setup_cuda_optimizations(
     return settings
 
 
+# [DESIGN.B][CAMFM.A2b_STEADY_STATE] GPU warmup to eliminate cold-start timing artifacts
 def warmup_model(
     model: torch.nn.Module,
     input_shape: tuple,
