@@ -1,0 +1,124 @@
+{
+  "design": "B",
+  "timestamp": "2026-02-02T05:09:46.343702",
+  "dataset": {
+    "name": "train_tf",
+    "total_samples": 43783,
+    "num_classes": 13
+  },
+  "metrics": {
+    "chamfer_distance": 0.0004513809674660727,
+    "f1_tau": 0.6566880826726184,
+    "f1_2tau": 0.7950628453928399
+  },
+  "per_category": {
+    "Airplane": {
+      "category_id": "02691156",
+      "samples": 4045,
+      "chamfer_distance": 0.0003808936320640416,
+      "f1_tau": 0.758840843401478,
+      "f1_2tau": 0.8463563422184689
+    },
+    "Bench": {
+      "category_id": "02828884",
+      "samples": 1816,
+      "chamfer_distance": 0.00048508700615357037,
+      "f1_tau": 0.6498553656775684,
+      "f1_2tau": 0.7827463564483029
+    },
+    "Cabinet": {
+      "category_id": "02933112",
+      "samples": 1572,
+      "chamfer_distance": 0.00034525190705663654,
+      "f1_tau": 0.6461036690960199,
+      "f1_2tau": 0.8062074785363401
+    },
+    "Car": {
+      "category_id": "02958343",
+      "samples": 7496,
+      "chamfer_distance": 0.00025215954212890227,
+      "f1_tau": 0.6934565740171655,
+      "f1_2tau": 0.8558979482694343
+    },
+    "Chair": {
+      "category_id": "03001627",
+      "samples": 6778,
+      "chamfer_distance": 0.0005244913473812657,
+      "f1_tau": 0.5866895118021894,
+      "f1_2tau": 0.7402659023242864
+    },
+    "Display": {
+      "category_id": "03211117",
+      "samples": 1095,
+      "chamfer_distance": 0.0005908001299118772,
+      "f1_tau": 0.5706695778077875,
+      "f1_2tau": 0.7214282964097034
+    },
+    "Lamp": {
+      "category_id": "03636649",
+      "samples": 2318,
+      "chamfer_distance": 0.0010735856186494905,
+      "f1_tau": 0.5605445322674306,
+      "f1_2tau": 0.6854250008646162
+    },
+    "Loudspeaker": {
+      "category_id": "03691459",
+      "samples": 1618,
+      "chamfer_distance": 0.0006508974271820474,
+      "f1_tau": 0.5242637594031105,
+      "f1_2tau": 0.6957456728204796
+    },
+    "Rifle": {
+      "category_id": "04090263",
+      "samples": 2372,
+      "chamfer_distance": 0.0003938921026484387,
+      "f1_tau": 0.7642864157871124,
+      "f1_2tau": 0.8521650517752448
+    },
+    "Sofa": {
+      "category_id": "04256520",
+      "samples": 3173,
+      "chamfer_distance": 0.00044964489002086226,
+      "f1_tau": 0.5554325165516717,
+      "f1_2tau": 0.7376818116437714
+    },
+    "Table": {
+      "category_id": "04379243",
+      "samples": 8509,
+      "chamfer_distance": 0.00038999666695011486,
+      "f1_tau": 0.7093395462804614,
+      "f1_2tau": 0.8307926043190773
+    },
+    "Telephone": {
+      "category_id": "04401088",
+      "samples": 1052,
+      "chamfer_distance": 0.00036250050117621026,
+      "f1_tau": 0.7313138478243794,
+      "f1_2tau": 0.8496772645414661
+    },
+    "Watercraft": {
+      "category_id": "04530566",
+      "samples": 1939,
+      "chamfer_distance": 0.0005692298928075595,
+      "f1_tau": 0.5976521473399233,
+      "f1_2tau": 0.7400701552390456
+    }
+  },
+  "timing": {
+    "total_seconds": 808.1055951118469,
+    "total_minutes": 13.468426585197449,
+    "samples_per_second": 54.17980059145631,
+    "ms_per_sample": 18.457063132079732,
+    "avg_batch_inference_ms": 140.4786881001465
+  },
+  "mesh_generation": {
+    "samples_generated": 26,
+    "files_generated": 78,
+    "output_directory": "outputs/designB_meshes"
+  },
+  "configuration": {
+    "batch_size": 8,
+    "num_gpus": 1,
+    "checkpoint": "datasets/data/pretrained/tensorflow.pth.tar"
+  }
+}

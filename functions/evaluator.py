@@ -48,7 +48,10 @@ class Evaluator(CheckpointRunner):
                 self.model = Classifier(self.options.model, self.options.dataset.num_classes)
             else:
                 raise NotImplementedError("Your model is not found")
-            self.model = torch.nn.DataParallel(self.model, device_ids=self.gpus).cuda()
+            # Design A: Run model on CPU, keep chamfer/renderer on GPU
+            self.logger.info("Design A: Model will run on CPU, chamfer/renderer on GPU")
+            # Do NOT move model to GPU - keep on CPU
+            # self.model = torch.nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
         # Evaluate step count, useful in summary
         self.evaluate_step_count = 0
@@ -102,16 +105,17 @@ class Evaluator(CheckpointRunner):
             # Get ground truth
             images = input_batch['images']
 
-            # Time the forward pass
-            torch.cuda.synchronize()  # Ensure all GPU operations are complete
+            # Time the forward pass (CPU inference)
             inference_start = time.time()
-            out = self.model(images)
-            torch.cuda.synchronize()  # Wait for forward pass to complete
+            out = self.model(images)  # Model runs on CPU
             inference_end = time.time()
             self.inference_time.update(inference_end - inference_start, images.size(0))
 
             if self.options.model.name == "pixel2mesh":
                 pred_vertices = out["pred_coord"][-1]
+                # Move pred_vertices to GPU for chamfer distance computation
+                pred_vertices = pred_vertices.cuda()
+                
                 gt_points = input_batch["points_orig"]
                 if isinstance(gt_points, list):
                     gt_points = [pts.cuda() for pts in gt_points]
@@ -151,8 +155,9 @@ class Evaluator(CheckpointRunner):
         # Iterate over all batches in an epoch
         batch_start = time.time()
         for step, batch in enumerate(test_data_loader):
-            # Send input to GPU
-            batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+            # Design A: Keep data on CPU for model inference
+            # Do NOT move batch to GPU yet - model runs on CPU
+            # batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
 
             # Run evaluation step
             out = self.evaluate_step(batch)
