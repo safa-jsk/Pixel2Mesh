@@ -121,5 +121,8 @@ datasets/examples/*.obj
 summary
 checkpoints
 
+# Artifacts (logs, meshes, checkpoints, CSVs) — generated, not tracked
+artifacts/
+
 # IDEA
 .idea

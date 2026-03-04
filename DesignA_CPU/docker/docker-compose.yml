@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  pixel2mesh-cpu:
+    image: pixel2mesh:latest
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: bash
+    # No GPU runtime — runs on CPU only.
+    # Use DesignA_GPU/docker/docker-compose.yml for GPU mode.

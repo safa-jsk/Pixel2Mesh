@@ -1,0 +1,2 @@
+run_name,version,cd,f1_tau,f1_2tau,total_time_sec,total_time_min,avg_inference_sec,avg_inference_ms,avg_batch_sec,throughput_imgs_per_sec,config,checkpoint,log_path
+"designA_cpu_full","designa_vgg_0303162235",0.000498,0.642188,0.780343,8250.84,137.51,0.6920,692.05,0.6976,1.44,"configs/defaults/designA_vgg.yml","datasets/data/pretrained/tensorflow.pth.tar","artifacts/logs/designA/designA_cpu_full/designa_vgg_0303162235_eval.log"
